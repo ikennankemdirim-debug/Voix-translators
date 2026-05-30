@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Voix — French ⇄ English Translator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Outfit:wght@300;400;500&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0d0f14; --surface: #161921; --surface2: #1e2230;
+    --border: rgba(255,255,255,0.08); --border-hover: rgba(255,255,255,0.16);
+    --text: #f0ede8; --muted: #8a8fa8; --accent: #c9a96e; --accent2: #7eb8c9;
+    --red: #e05252; --green: #52c07a; --radius: 16px; --radius-sm: 10px;
+  }
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Outfit', sans-serif; font-weight: 300; overflow-x: hidden; }
+  body { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 2.5rem 1.5rem 3rem;
+    background-image: radial-gradient(ellipse 60% 40% at 20% 10%, rgba(201,169,110,0.08) 0%, transparent 60%), radial-gradient(ellipse 50% 40% at 80% 80%, rgba(126,184,201,0.07) 0%, transparent 60%); }
+  header { text-align: center; margin-bottom: 2rem; animation: fadeUp 0.6s ease both; }
+  .logo { font-family: 'Playfair Display', serif; font-size: 3rem; font-weight: 400; letter-spacing: -1px; color: var(--text); line-height: 1; }
+  .logo em { font-style: italic; color: var(--accent); }
+  .tagline { margin-top: 0.5rem; font-size: 0.85rem; color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; }
+  .lang-bar { display: flex; align-items: center; justify-content: center; gap: 1rem; margin-bottom: 1.75rem; animation: fadeUp 0.6s 0.1s ease both; }
+  .lang-chip { background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 0.5rem 1.5rem; font-size: 0.9rem; font-weight: 500; color: var(--text); min-width: 130px; text-align: center; transition: border-color 0.2s; }
+  .lang-chip.active { border-color: var(--accent); color: var(--accent); }
+  .swap-btn { width: 42px; height: 42px; border-radius: 50%; border: 1px solid var(--border); background: var(--surface); color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: border-color 0.2s, color 0.2s, transform 0.3s; flex-shrink: 0; }
+  .swap-btn:hover { border-color: var(--border-hover); color: var(--text); }
+  .swap-btn.spin { transform: rotate(180deg); }
+  .panels { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; width: 100%; max-width: 820px; margin-bottom: 1.75rem; animation: fadeUp 0.6s 0.2s ease both; }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; display: flex; flex-direction: column; min-height: 180px; }
+  .panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.875rem; }
+  .panel-label { font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+  .panel-actions { display: flex; gap: 6px; }
+  .icon-btn { background: none; border: 1px solid transparent; border-radius: var(--radius-sm); padding: 4px 10px; color: var(--muted); font-size: 0.78rem; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: border-color 0.15s, color 0.15s, background 0.15s; font-family: 'Outfit', sans-serif; }
+  .icon-btn:hover { border-color: var(--border); color: var(--text); background: var(--surface2); }
+  .icon-btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+  .panel-text { flex: 1; font-size: 1rem; line-height: 1.65; color: var(--text); word-break: break-word; font-family: 'Playfair Display', serif; }
+  .panel-text.placeholder { color: var(--muted); font-family: 'Outfit', sans-serif; font-style: italic; font-size: 0.9rem; }
+
+  /* Input area */
+  .input-area { width: 100%; max-width: 820px; margin-bottom: 1.5rem; animation: fadeUp 0.6s 0.25s ease both; }
+  .speech-input-wrap { position: relative; display: flex; align-items: center; }
+  .speech-input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 3.5rem 1rem 1.25rem;
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    font-size: 1rem;
+    font-weight: 300;
+    resize: none;
+    min-height: 60px;
+    outline: none;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+  }
+  .speech-input:focus { border-color: var(--accent); }
+  .speech-input::placeholder { color: var(--muted); font-style: italic; }
+  /* Native mic button inside input on Android */
+  .mic-inside {
+    position: absolute;
+    right: 12px;
+    bottom: 12px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .mic-inside:hover { border-color: var(--accent); color: var(--accent); }
+  .mic-inside svg { width: 18px; height: 18px; }
+
+  .translate-btn {
+    width: 100%;
+    margin-top: 10px;
+    padding: 0.85rem;
+    background: var(--accent);
+    color: #1a1200;
+    border: none;
+    border-radius: var(--radius);
+    font-family: 'Outfit', sans-serif;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    letter-spacing: 0.03em;
+  }
+  .translate-btn:hover { opacity: 0.88; }
+  .translate-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .mic-zone { display: flex; flex-direction: column; align-items: center; gap: 0.75rem; animation: fadeUp 0.6s 0.3s ease both; }
+  .mic-ring { position: relative; width: 90px; height: 90px; display: flex; align-items: center; justify-content: center; }
+  .mic-ripple { position: absolute; inset: 0; border-radius: 50%; border: 1px solid var(--red); opacity: 0; }
+  .recording .mic-ripple.r1 { animation: ripple 1.5s infinite; }
+  .recording .mic-ripple.r2 { animation: ripple 1.5s 0.4s infinite; }
+  @keyframes ripple { 0% { transform: scale(1); opacity: 0.6; } 100% { transform: scale(1.9); opacity: 0; } }
+  .mic-btn { width: 72px; height: 72px; border-radius: 50%; border: 1px solid var(--border); background: var(--surface); color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center; position: relative; z-index: 1; transition: border-color 0.2s, color 0.2s, background 0.2s; }
+  .mic-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--surface2); }
+  .mic-btn.recording { border-color: var(--red); color: var(--red); background: rgba(224,82,82,0.08); }
+  .mic-btn svg { width: 28px; height: 28px; }
+  .wave { display: none; align-items: center; gap: 3px; height: 28px; }
+  .wave.active { display: flex; }
+  .wave span { display: block; width: 3px; border-radius: 2px; background: var(--red); animation: waveBar 0.7s ease-in-out infinite alternate; }
+  .wave span:nth-child(1) { height: 6px; } .wave span:nth-child(2) { height: 14px; animation-delay: 0.1s; }
+  .wave span:nth-child(3) { height: 22px; animation-delay: 0.2s; } .wave span:nth-child(4) { height: 14px; animation-delay: 0.1s; }
+  .wave span:nth-child(5) { height: 6px; }
+  @keyframes waveBar { from { transform: scaleY(0.4); } to { transform: scaleY(1); } }
+  .status { font-size: 0.82rem; color: var(--muted); display: flex; align-items: center; gap: 7px; min-height: 22px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+  .dot.ok { background: var(--green); } .dot.rec { background: var(--red); animation: blink 0.7s infinite; } .dot.err { background: var(--red); }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+  .hint { font-size: 0.78rem; color: var(--muted); text-align: center; margin-top: 0.5rem; opacity: 0.7; }
+  footer { margin-top: 2rem; color: var(--muted); font-size: 0.75rem; text-align: center; opacity: 0.6; }
+  @media (max-width: 600px) { .logo { font-size: 2.2rem; } .panels { grid-template-columns: 1fr; } .lang-chip { min-width: 100px; font-size: 0.82rem; padding: 0.45rem 1rem; } }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><em>Voix</em></div>
+  <div class="tagline">French &nbsp;⇄&nbsp; English &nbsp;·&nbsp; Voice Translator</div>
+</header>
+
+<div class="lang-bar">
+  <div class="lang-chip active" id="src-chip">🇫🇷 French</div>
+  <button class="swap-btn" id="swap-btn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 16V4m0 0L4 7m3-3 3 3M17 8v12m0 0 3-3m-3 3-3-3"/></svg>
+  </button>
+  <div class="lang-chip" id="tgt-chip">🇬🇧 English</div>
+</div>
+
+<div class="panels">
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-label" id="src-label">You say · French</span>
+      <div class="panel-actions">
+        <button class="icon-btn" id="play-src" style="display:none">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg> Play
+        </button>
+        <button class="icon-btn" id="copy-src" style="display:none">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy
+        </button>
+      </div>
+    </div>
+    <div class="panel-text placeholder" id="transcript">Translation will appear here…</div>
+  </div>
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-label" id="tgt-label">Translation · English</span>
+      <div class="panel-actions">
+        <button class="icon-btn" id="play-tgt" style="display:none">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg> Play
+        </button>
+        <button class="icon-btn" id="copy-tgt" style="display:none">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy
+        </button>
+      </div>
+    </div>
+    <div class="panel-text placeholder" id="translation">Translation appears here…</div>
+  </div>
+</div>
+
+<!-- Text input with mic button -->
+<div class="input-area">
+  <div class="speech-input-wrap">
+    <textarea class="speech-input" id="text-input" placeholder="Type or tap the mic icon to speak…" rows="2"></textarea>
+    <button class="mic-inside" id="mic-btn" title="Tap to speak">
+      <svg id="icon-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 19v3M9 22h6"/></svg>
+      <svg id="icon-stop" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="display:none"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+    </button>
+  </div>
+  <button class="translate-btn" id="translate-btn">Translate →</button>
+  <div class="hint">💡 On Android: tap the mic icon in the keyboard to speak, or use the mic button above</div>
+</div>
+
+<div class="mic-zone">
+  <div class="wave" id="wave"><span></span><span></span><span></span><span></span><span></span></div>
+  <div class="status">
+    <div class="dot" id="dot"></div>
+    <span id="status-text">Ready</span>
+  </div>
+</div>
+
+<footer>Free translation by MyMemory &nbsp;·&nbsp; Works best in Chrome</footer>
+
+<script>
+const cfg = {
+  'fr-en': { src:'fr-FR', tgt:'en-US', mmSrc:'fr', mmTgt:'en', srcChip:'🇫🇷 French', tgtChip:'🇬🇧 English', srcLabel:'You say · French', tgtLabel:'Translation · English', placeholder:'Type French here or use mic…', tgtPlaceholder:'Translation appears here…' },
+  'en-fr': { src:'en-US', tgt:'fr-FR', mmSrc:'en', mmTgt:'fr', srcChip:'🇬🇧 English', tgtChip:'🇫🇷 French', srcLabel:'You say · English', tgtLabel:'Translation · French', placeholder:'Type English here or use mic…', tgtPlaceholder:'La traduction apparaît ici…' }
+};
+
+let dir = 'fr-en', recognition = null, isRecording = false;
+const $ = id => document.getElementById(id);
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+function setStatus(msg, type) { $('status-text').textContent = msg; $('dot').className = 'dot' + (type ? ' ' + type : ''); }
+
+function updateLangUI() {
+  const c = cfg[dir];
+  $('src-chip').textContent = c.srcChip; $('tgt-chip').textContent = c.tgtChip;
+  $('src-label').textContent = c.srcLabel; $('tgt-label').textContent = c.tgtLabel;
+  $('src-chip').className = 'lang-chip active'; $('tgt-chip').className = 'lang-chip';
+  $('text-input').placeholder = c.placeholder;
+}
+
+function showTranscript(text) {
+  const el = $('transcript'); el.textContent = text; el.className = 'panel-text';
+  $('play-src').style.display = 'flex'; $('copy-src').style.display = 'flex';
+}
+
+function showTranslation(text) {
+  const el = $('translation'); el.textContent = text; el.className = 'panel-text';
+  $('play-tgt').style.display = 'flex'; $('copy-tgt').style.display = 'flex';
+}
+
+async function translate(text) {
+  if (!text.trim()) return;
+  const c = cfg[dir];
+  setStatus('Translating…', 'ok');
+  showTranscript(text);
+  try {
+    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${c.mmSrc}|${c.mmTgt}`;
+    const resp = await fetch(url);
+    const data = await resp.json();
+    if (data.responseStatus !== 200) throw new Error('Translation failed');
+    const result = data.responseData.translatedText;
+    showTranslation(result);
+    setStatus('Done!', 'ok');
+    speak(result, c.tgt);
+  } catch(e) {
+    setStatus('Translation error — check connection', 'err');
+  }
+}
+
+function speak(text, lang) {
+  if (!window.speechSynthesis) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = lang; speechSynthesis.speak(u);
+}
+
+// Translate button
+$('translate-btn').addEventListener('click', () => {
+  const text = $('text-input').value.trim();
+  if (text) translate(text);
+});
+
+// Also translate on Enter key (desktop)
+$('text-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); const text = $('text-input').value.trim(); if (text) translate(text); }
+});
+
+// Mic button using Web Speech API
+if (SpeechRecognition) {
+  $('mic-btn').addEventListener('click', () => {
+    if (isRecording) { stopRec(); return; }
+    recognition = new SpeechRecognition();
+    recognition.lang = cfg[dir].src;
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => {
+      isRecording = true;
+      $('mic-btn').style.borderColor = 'var(--red)';
+      $('mic-btn').style.color = 'var(--red)';
+      $('icon-mic').style.display = 'none';
+      $('icon-stop').style.display = 'block';
+      $('wave').classList.add('active');
+      setStatus('Listening — speak now…', 'rec');
+    };
+
+    recognition.onresult = e => {
+      const text = e.results[0][0].transcript;
+      $('text-input').value = text;
+      translate(text);
+    };
+
+    recognition.onerror = e => {
+      stopRecUI();
+      if (e.error === 'no-speech') setStatus('No speech — try typing instead', '');
+      else if (e.error === 'not-allowed') setStatus('Mic denied — please type', 'err');
+      else setStatus('Try typing your text instead', '');
+    };
+
+    recognition.onend = () => { stopRecUI(); };
+    recognition.start();
+  });
+} else {
+  $('mic-btn').style.display = 'none';
+}
+
+function stopRecUI() {
+  isRecording = false;
+  $('mic-btn').style.borderColor = ''; $('mic-btn').style.color = '';
+  $('icon-mic').style.display = 'block'; $('icon-stop').style.display = 'none';
+  $('wave').classList.remove('active');
+}
+
+function stopRec() { if (recognition) { recognition.stop(); recognition = null; } stopRecUI(); }
+
+$('swap-btn').addEventListener('click', () => {
+  dir = dir === 'fr-en' ? 'en-fr' : 'fr-en';
+  $('swap-btn').classList.add('spin');
+  setTimeout(() => $('swap-btn').classList.remove('spin'), 350);
+  updateLangUI();
+  $('text-input').value = '';
+  $('transcript').textContent = 'Translation will appear here…'; $('transcript').className = 'panel-text placeholder';
+  $('translation').textContent = cfg[dir].tgtPlaceholder; $('translation').className = 'panel-text placeholder';
+  $('play-src').style.display = 'none'; $('copy-src').style.display = 'none';
+  $('play-tgt').style.display = 'none'; $('copy-tgt').style.display = 'none';
+  setStatus('Ready', '');
+});
+
+$('play-src').addEventListener('click', () => { const t = $('transcript').textContent; if (t) speak(t, cfg[dir].src); });
+$('play-tgt').addEventListener('click', () => { const t = $('translation').textContent; if (t) speak(t, cfg[dir].tgt); });
+
+function copyBtn(btnId, getEl) {
+  $(btnId).addEventListener('click', () => {
+    navigator.clipboard.writeText($(getEl).textContent).then(() => {
+      const b = $(btnId), orig = b.innerHTML;
+      b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><polyline points="20 6 9 17 4 12"/></svg> Copied';
+      setTimeout(() => { b.innerHTML = orig; }, 1600);
+    });
+  });
+}
+copyBtn('copy-src', 'transcript');
+copyBtn('copy-tgt', 'translation');
+</script>
+</body>
+</html>
